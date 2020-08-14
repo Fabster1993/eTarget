@@ -3,8 +3,7 @@
 #include "DeviceDiscoveryAgent.h"
 
 const QString positionServiceUuid = "{1bc5d5a5-0200-b49a-e111-010000000000}";
-const QString xPositionUuid = "{1bc5d5a5-0200-36ac-e111-010000000000}";
-const QString yPositionUuid = "{1bc5d5a5-0200-36ac-e111-01000000E000}";
+const QString PositionUuid = "{1bc5d5a5-0200-36ac-e111-010000000000}";
 
 using namespace Bluetooth;
 
@@ -29,6 +28,7 @@ void DeviceHandler::tryToConnect()
 
 void DeviceHandler::onDeviceOfInterestFound(const QBluetoothDeviceInfo& deviceInfo)
 {
+    qDebug() << "Is cached: " << deviceInfo.isCached();
     controller = QLowEnergyController::createCentral(deviceInfo, dynamic_cast<QObject*>(this));
     connect(controller, &QLowEnergyController::serviceDiscovered, this, &DeviceHandler::onServiceDiscovered);
     connect(controller, &QLowEnergyController::connected, this, &DeviceHandler::onDeviceConnected);
@@ -55,25 +55,20 @@ void DeviceHandler::onServiceDiscovered(const QBluetoothUuid& gatt)
 void DeviceHandler::onServiceStateChanged(QLowEnergyService::ServiceState state)
 {
     qDebug() << state;
-    if(state == QLowEnergyService::ServiceDiscovered)
+    if (state == QLowEnergyService::ServiceDiscovered)
     {
-        QList<QLowEnergyCharacteristic> characteristics = positionService->characteristics();
-        if(characteristics.length() < 2)
+        const QLowEnergyCharacteristic hrChar = positionService->characteristic(QBluetoothUuid(PositionUuid));
+        if (!hrChar.isValid())
         {
-            qDebug() << "There are less than 2 characteristics in service";
-            return;
+            qDebug() << "invalid";
         }
-        for(int index = 0; index < characteristics.length(); ++index)
+        PositionDescriptor = hrChar.descriptor(QBluetoothUuid::ClientCharacteristicConfiguration);
+        if (PositionDescriptor.isValid())
+            positionService->writeDescriptor(PositionDescriptor, QByteArray::fromHex("0100"));
+        else
         {
-            qDebug() << characteristics.at(index).properties();
+            qDebug() << "invalid descriptor";
         }
-//        xPositionDescriptor = characteristics.at(0).descriptor(QBluetoothUuid::ClientCharacteristicConfiguration);
-//        if (xPositionDescriptor.isValid())
-//        {
-//            qDebug() << "X Position Descriptor not valid";
-//        }
-//        qDebug() << xPositionDescriptor.uuid();
-//        positionService->writeDescriptor(xPositionDescriptor, QByteArray::fromHex("0100"));
     }
 }
 
@@ -110,7 +105,11 @@ void DeviceHandler::onServiceError(QLowEnergyService::ServiceError newError)
     qDebug() << newError;
 }
 
-void DeviceHandler::onNewDataReceived(const QLowEnergyCharacteristic& c, const QByteArray& value)
+void DeviceHandler::onNewDataReceived(const QLowEnergyCharacteristic& characteristic, const QByteArray& value)
 {
-    qDebug() << "Received data: " << value;
+    if(characteristic.uuid().toString() == PositionUuid)
+    {
+        qDebug() << "X Position:" << QString::fromStdString(value.toStdString());
+    }
+    qDebug() << "Received data: " << value.length();
 }

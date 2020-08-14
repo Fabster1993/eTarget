@@ -202,9 +202,9 @@ int main(void)
 
   // Bluetooth Setup Service Start
   uint16_t ServiceHandle;
-  uint16_t PositionXHandle, PositionYHandle;
+  uint16_t PositionHandle;;
   uint8_t service_uuid[16] = {0x00,0x00,0x00,0x00,0x00,0x01,0x11,0xe1,0x9a,0xb4,0x00,0x02,0xa5,0xd5,0xc5,0x1b};
-  ret = aci_gatt_add_serv(UUID_TYPE_128, service_uuid, PRIMARY_SERVICE, 7, &ServiceHandle);
+  ret = aci_gatt_add_serv(UUID_TYPE_128, service_uuid, PRIMARY_SERVICE, 4, &ServiceHandle);
 
   if (ret != BLE_STATUS_SUCCESS)
   {
@@ -212,27 +212,17 @@ int main(void)
   }
 
   // Fill the characteristics
-  uint8_t position_x_uuid [16] = {0x00,0x00,0x00,0x00,0x00,0x01,0x11,0xe1,0xac,0x36,0x00,0x02,0xa5,0xd5,0xc5,0x1b};
-  ret =  aci_gatt_add_char(ServiceHandle, UUID_TYPE_128, position_x_uuid,
-                           4,
-                           CHAR_PROP_NOTIFY|CHAR_PROP_READ,
+  uint8_t position_uuid [16] = {0x00,0x00,0x00,0x00,0x00,0x01,0x11,0xe1,0xac,0x36,0x00,0x02,0xa5,0xd5,0xc5,0x1b};
+  ret =  aci_gatt_add_char(ServiceHandle, UUID_TYPE_128, position_uuid,
+                           11,
+                           CHAR_PROP_NOTIFY,
                            ATTR_PERMISSION_NONE,
                            GATT_NOTIFY_READ_REQ_AND_WAIT_FOR_APPL_RESP,
-                           16, 0, &PositionXHandle);
+                           16, 0, &PositionHandle);
+
   if (ret != BLE_STATUS_SUCCESS)
   {
-    // failed to add pos x characteristic
-  }
-  uint8_t position_y_uuid [16] = {0x00,0xE0,0x00,0x00,0x00,0x01,0x11,0xe1,0xac,0x36,0x00,0x02,0xa5,0xd5,0xc5,0x1b};
-  ret =  aci_gatt_add_char(ServiceHandle, UUID_TYPE_128, position_y_uuid,
-                           4,
-                           CHAR_PROP_NOTIFY|CHAR_PROP_READ,
-                           ATTR_PERMISSION_NONE,
-                           GATT_NOTIFY_READ_REQ_AND_WAIT_FOR_APPL_RESP,
-                           16, 0, &PositionYHandle);
-  if (ret != BLE_STATUS_SUCCESS)
-  {
-    // failed to add pos y characteristic
+    // failed to add position characteristic
   }
   setDiscoverable();
 
@@ -242,20 +232,14 @@ int main(void)
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
-  uint32_t index = 0;
   while (1)
   {
     /* USER CODE END WHILE */
     /* USER CODE BEGIN 3 */
     // Bluetooth send data Start
-    uint32_t posX = index;
-    ret = aci_gatt_update_char_value(ServiceHandle, PositionXHandle, 0, 4, (uint8_t*)posX);
-    if (ret != BLE_STATUS_SUCCESS)
-    {
-      // failed to update value
-    }
-    uint32_t posY = index * 2;
-    ret = aci_gatt_update_char_value(ServiceHandle, PositionYHandle, 0, 4, (uint8_t*)posY);
+    uint8_t position [11];
+    sprintf(position,"X%dY%d",1000,1000);
+    ret = aci_gatt_update_char_value(ServiceHandle, PositionHandle, 0, 11, position);
     if (ret != BLE_STATUS_SUCCESS)
     {
       // failed to update value
@@ -263,7 +247,6 @@ int main(void)
     hci_user_evt_proc();
     HAL_Delay(1000);
     // Bluetooth send data End
-    index++;
   }
   /* USER CODE END 3 */
 }

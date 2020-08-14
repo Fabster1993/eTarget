@@ -27,7 +27,7 @@ namespace Bluetooth
         void onDeviceDisconnected();
         void onErrorOccured(QLowEnergyController::Error error);
         void onServiceError(QLowEnergyService::ServiceError newError);
-        void onNewDataReceived(const QLowEnergyCharacteristic &c, const QByteArray &value);
+        void onNewDataReceived(const QLowEnergyCharacteristic &characteristic, const QByteArray &value);
 
     signals:
 
@@ -35,8 +35,7 @@ namespace Bluetooth
     private:
         QLowEnergyController* controller;
         QLowEnergyService* positionService;
-        QLowEnergyDescriptor xPositionDescriptor;
-        QLowEnergyDescriptor yPositionDescriptor;
+        QLowEnergyDescriptor PositionDescriptor;
         DeviceDiscoveryAgent* discoveryAgent;
     };
 }

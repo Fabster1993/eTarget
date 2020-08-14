@@ -49,5 +49,6 @@ void DeviceDiscoveryAgent::onScanFinished()
     {
         emit cannotFindDeviceOfInterest();
         qDebug() << "Scan finished. eTarget was not found";
+        start();
     }
 }
