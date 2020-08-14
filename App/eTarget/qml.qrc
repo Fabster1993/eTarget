@@ -1,5 +1,10 @@
 <RCC>
     <qresource prefix="/">
         <file>main.qml</file>
+        <file>Widgets/Text.qml</file>
+        <file>Widgets/AppHeader.qml</file>
+        <file>Widgets/CircleButton.qml</file>
+        <file>Widgets/Target.qml</file>
+        <file>Widgets/StrikePoint.qml</file>
     </qresource>
 </RCC>

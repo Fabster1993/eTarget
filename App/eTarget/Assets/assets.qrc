@@ -1,0 +1,7 @@
+<RCC>
+    <qresource prefix="/">
+        <file>connect.svg</file>
+        <file>calibril.ttf</file>
+        <file>arrow.svg</file>
+    </qresource>
+</RCC>
