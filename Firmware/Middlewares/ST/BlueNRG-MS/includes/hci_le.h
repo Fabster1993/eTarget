@@ -17,6 +17,10 @@
 #ifndef __HCI_LE_H_
 #define __HCI_LE_H_
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #include "bluenrg_types.h"
 #include "link_layer.h"
 
@@ -188,5 +192,8 @@ int hci_le_read_local_version(uint8_t *hci_version, uint16_t *hci_revision, uint
  * @}
  */
 
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* __HCI_LE_H_ */

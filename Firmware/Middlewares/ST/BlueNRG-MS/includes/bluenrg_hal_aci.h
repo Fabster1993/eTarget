@@ -16,6 +16,11 @@
 #ifndef __BLUENRG_HAL_ACI_H__
 #define __BLUENRG_HAL_ACI_H__
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+
 /** 
  * @addtogroup HIGH_LEVEL_INTERFACE HIGH_LEVEL_INTERFACE
  * @{
@@ -389,5 +394,10 @@ typedef __packed struct _evt_hal_crash_info{
 /**
  * @}
  */
+
+#ifdef __cplusplus
+}
+#endif
+
 
 #endif /* __BLUENRG_HAL_ACI_H__ */
