@@ -271,6 +271,19 @@ static void ADC_Init(ADC_HandleTypeDef* hadc);
 static void ADC_DMAConvCplt(DMA_HandleTypeDef *hdma);
 static void ADC_DMAError(DMA_HandleTypeDef *hdma);
 static void ADC_DMAHalfConvCplt(DMA_HandleTypeDef *hdma);
+
+extern ADC_HandleTypeDef hadc1;
+extern ADC_HandleTypeDef hadc2;
+extern ADC_HandleTypeDef hadc3;
+extern TIM_HandleTypeDef htim1;
+
+extern uint8_t volatile measurementOngoing;
+extern uint8_t volatile registeredSensorA;
+extern uint8_t volatile registeredSensorB;
+extern uint8_t volatile registeredSensorC;
+extern uint32_t volatile timeSensorA;
+extern uint32_t volatile timeSensorB;
+extern uint32_t volatile timeSensorC;
 /**
   * @}
   */
@@ -1558,11 +1571,50 @@ __weak void HAL_ADC_ConvHalfCpltCallback(ADC_HandleTypeDef* hadc)
   */
 __weak void HAL_ADC_LevelOutOfWindowCallback(ADC_HandleTypeDef* hadc)
 {
-  /* Prevent unused argument(s) compilation warning */
-  UNUSED(hadc);
-  /* NOTE : This function Should not be modified, when the callback is needed,
-            the HAL_ADC_LevelOoutOfWindowCallback could be implemented in the user file
-   */
+  if(hadc == &hadc1 && !registeredSensorA)
+  {
+    if(!measurementOngoing)
+    {
+      htim1.Instance->CNT = 0;
+      timeSensorA = 0;
+      measurementOngoing = 1;
+    }
+    else
+    {
+      timeSensorA = htim1.Instance->CNT;
+    }
+    registeredSensorA = 1;
+    return;
+  }
+  else if(hadc == &hadc2 && !registeredSensorB)
+  {
+    if(!measurementOngoing)
+    {
+      htim1.Instance->CNT = 0;
+      timeSensorB = 0;
+      measurementOngoing = 1;
+    }
+    else
+    {
+      timeSensorB = htim1.Instance->CNT;
+    }
+    registeredSensorB = 1;
+    return;
+  }
+  else if(hadc == &hadc3 && !registeredSensorC)
+  {
+    if(!measurementOngoing)
+    {
+      htim1.Instance->CNT = 0;
+      timeSensorC = 0;
+      measurementOngoing = 1;
+    }
+    else
+    {
+      timeSensorC = htim1.Instance->CNT;
+    }
+    registeredSensorC = 1;
+  }
 }
 
 /**

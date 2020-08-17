@@ -49,7 +49,13 @@ ADC_HandleTypeDef hadc3;
 TIM_HandleTypeDef htim1;
 
 /* USER CODE BEGIN PV */
-
+uint8_t volatile measurementOngoing = 0;
+uint8_t volatile registeredSensorA = 0;
+uint8_t volatile registeredSensorB = 0;
+uint8_t volatile registeredSensorC = 0;
+uint32_t volatile timeSensorA = 0;
+uint32_t volatile timeSensorB = 0;
+uint32_t volatile timeSensorC = 0;
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -103,11 +109,7 @@ int main(void)
   HAL_ADC_Start(&hadc1);
   HAL_ADC_Start(&hadc2);
   HAL_ADC_Start(&hadc3);
-  htim1.Instance->CNT = 0;
   HAL_TIM_Base_Start(&htim1);
-  HAL_Delay(60);
-  uint32_t val = htim1.Instance->CNT;
-  uint32_t val2 = 0;
   Bluetooth bluetooth;
   bluetooth.initialize();
   /* USER CODE END 2 */
@@ -119,9 +121,21 @@ int main(void)
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
-    bluetooth.updatePositionCharacteristics(1000, 1000);
-    hci_user_evt_proc();
-    HAL_Delay(1000);
+    if(registeredSensorA && registeredSensorC)
+    {
+      bluetooth.updatePositionCharacteristics(timeSensorA, timeSensorC);
+      timeSensorA = 0;
+      timeSensorB = 0;
+      timeSensorC = 0;
+      registeredSensorA = 0;
+      registeredSensorB = 0;
+      registeredSensorC = 0;
+      measurementOngoing = 0;
+    }
+    if(!measurementOngoing)
+    {
+      hci_user_evt_proc();
+    }
   }
   /* USER CODE END 3 */
 }
@@ -204,7 +218,7 @@ static void MX_ADC1_Init(void)
   /** Configure the analog watchdog
   */
   AnalogWDGConfig.WatchdogMode = ADC_ANALOGWATCHDOG_ALL_REG;
-  AnalogWDGConfig.HighThreshold = 1000;
+  AnalogWDGConfig.HighThreshold = 600;
   AnalogWDGConfig.LowThreshold = 0;
   AnalogWDGConfig.ITMode = ENABLE;
   if (HAL_ADC_AnalogWDGConfig(&hadc1, &AnalogWDGConfig) != HAL_OK)
@@ -265,7 +279,7 @@ static void MX_ADC2_Init(void)
   /** Configure the analog watchdog
   */
   AnalogWDGConfig.WatchdogMode = ADC_ANALOGWATCHDOG_ALL_REG;
-  AnalogWDGConfig.HighThreshold = 1000;
+  AnalogWDGConfig.HighThreshold = 600;
   AnalogWDGConfig.LowThreshold = 0;
   AnalogWDGConfig.ITMode = ENABLE;
   if (HAL_ADC_AnalogWDGConfig(&hadc2, &AnalogWDGConfig) != HAL_OK)
@@ -326,7 +340,7 @@ static void MX_ADC3_Init(void)
   /** Configure the analog watchdog
   */
   AnalogWDGConfig.WatchdogMode = ADC_ANALOGWATCHDOG_ALL_REG;
-  AnalogWDGConfig.HighThreshold = 1000;
+  AnalogWDGConfig.HighThreshold = 600;
   AnalogWDGConfig.LowThreshold = 0;
   AnalogWDGConfig.ITMode = ENABLE;
   if (HAL_ADC_AnalogWDGConfig(&hadc3, &AnalogWDGConfig) != HAL_OK)
@@ -425,7 +439,7 @@ static void MX_GPIO_Init(void)
   HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
 
   /* EXTI interrupt init*/
-  HAL_NVIC_SetPriority(EXTI0_IRQn, 0, 0);
+  HAL_NVIC_SetPriority(EXTI0_IRQn, 1, 0);
   HAL_NVIC_EnableIRQ(EXTI0_IRQn);
 
 }
