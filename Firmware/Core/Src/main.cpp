@@ -24,6 +24,10 @@
 /* USER CODE BEGIN Includes */
 #include "Bluetooth.h"
 #include "hci.h"
+#include <stdio.h>
+#include <string.h>
+
+#include <Dense>
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -48,6 +52,8 @@ ADC_HandleTypeDef hadc3;
 
 TIM_HandleTypeDef htim1;
 
+UART_HandleTypeDef huart2;
+
 /* USER CODE BEGIN PV */
 uint8_t volatile measurementOngoing = 0;
 uint8_t volatile registeredSensorA = 0;
@@ -65,8 +71,44 @@ static void MX_ADC2_Init(void);
 static void MX_TIM1_Init(void);
 static void MX_ADC1_Init(void);
 static void MX_ADC3_Init(void);
+static void MX_USART2_UART_Init(void);
 /* USER CODE BEGIN PFP */
+struct Position
+{
+  int x;
+  int y;
+};
 
+Position sensorA = {156, -90};
+Position sensorB = {0, 180};
+Position sensorC = {-156, -90};
+const float c = 0.08f; // mm / 100ns
+
+using namespace Eigen;
+
+Position calculatePosition()
+{
+  float tA = timeSensorA; // to ms
+  float tB = timeSensorB; // to ms
+  float tC = timeSensorC; // to ms
+  float Ax = sensorA.x;
+  float Ay = sensorA.y;
+  float Bx = sensorB.x;
+  float By = sensorB.y;
+  float Cx = sensorC.x;
+  float Cy = sensorC.y;
+
+  Matrix3f A;
+  A << (2 * (Ax - Bx)),      (2 * (Ay - By)),    (2 * c * c * (tB - tA)),
+       (2 * (Bx - Cx)),      (2 * (By - Cy)),    (2 * c * c * (tC - tB)),
+       (2 * (Cx - Ax)),      (2 * (Cy - Ay)),    (2 * c * c * (tA - tC));
+  Vector3f b;
+  b << (Ax * Ax + Ay * Ay - Bx * Bx - By * By + c * c *(tB * tB - tA * tA)),
+       (Bx * Bx + By * By - Cx * Cx - Cy * Cy + c * c *(tC * tC - tB * tB)),
+       (Cx * Cx + Cy * Cy - Ax * Ax - Ay * Ay + c * c *(tA * tA - tC * tC));
+  Vector3f x = A.colPivHouseholderQr().solve(b);
+  return { static_cast<int>(x[0]), static_cast<int>(x[1]) };
+}
 /* USER CODE END PFP */
 
 /* Private user code ---------------------------------------------------------*/
@@ -105,6 +147,7 @@ int main(void)
   MX_TIM1_Init();
   MX_ADC1_Init();
   MX_ADC3_Init();
+  MX_USART2_UART_Init();
   /* USER CODE BEGIN 2 */
   HAL_ADC_Start(&hadc1);
   HAL_ADC_Start(&hadc2);
@@ -112,6 +155,7 @@ int main(void)
   HAL_TIM_Base_Start(&htim1);
   Bluetooth bluetooth;
   bluetooth.initialize();
+
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -123,7 +167,15 @@ int main(void)
     /* USER CODE BEGIN 3 */
     if(registeredSensorA && registeredSensorC)
     {
+      uint8_t message[100];
+      Position strikePosition = calculatePosition();
+
+      sprintf((char*)message,"X: %d Y: %d", (int)strikePosition.x, (int)strikePosition.y );
+      HAL_UART_Transmit(&huart2, message, strlen((char*)message), 0xFFFF);
+      sprintf((char*)message,"||| A: %u B: %u C: %u\r\n", (unsigned)timeSensorA / 10, (unsigned)timeSensorB / 10, (unsigned)timeSensorC / 10);
+      HAL_UART_Transmit(&huart2, message, strlen((char*)message), 0xFFFF);
       bluetooth.updatePositionCharacteristics(timeSensorA / 10, timeSensorC / 10);
+      HAL_Delay(1000);
       timeSensorA = 0;
       timeSensorB = 0;
       timeSensorC = 0;
@@ -131,7 +183,6 @@ int main(void)
       registeredSensorB = 0;
       registeredSensorC = 0;
       measurementOngoing = 0;
-      HAL_Delay(50);
     }
     if(!measurementOngoing)
     {
@@ -231,8 +282,8 @@ static void MX_ADC1_Init(void)
   /** Configure the analog watchdog
   */
   AnalogWDGConfig.WatchdogMode = ADC_ANALOGWATCHDOG_ALL_REG;
-  AnalogWDGConfig.HighThreshold = 600;
-  AnalogWDGConfig.LowThreshold = 0;
+  AnalogWDGConfig.HighThreshold = 480;
+  AnalogWDGConfig.LowThreshold = 280;
   AnalogWDGConfig.ITMode = ENABLE;
   if (HAL_ADC_AnalogWDGConfig(&hadc1, &AnalogWDGConfig) != HAL_OK)
   {
@@ -292,8 +343,8 @@ static void MX_ADC2_Init(void)
   /** Configure the analog watchdog
   */
   AnalogWDGConfig.WatchdogMode = ADC_ANALOGWATCHDOG_ALL_REG;
-  AnalogWDGConfig.HighThreshold = 600;
-  AnalogWDGConfig.LowThreshold = 0;
+  AnalogWDGConfig.HighThreshold = 480;
+  AnalogWDGConfig.LowThreshold = 280;
   AnalogWDGConfig.ITMode = ENABLE;
   if (HAL_ADC_AnalogWDGConfig(&hadc2, &AnalogWDGConfig) != HAL_OK)
   {
@@ -353,8 +404,8 @@ static void MX_ADC3_Init(void)
   /** Configure the analog watchdog
   */
   AnalogWDGConfig.WatchdogMode = ADC_ANALOGWATCHDOG_ALL_REG;
-  AnalogWDGConfig.HighThreshold = 600;
-  AnalogWDGConfig.LowThreshold = 0;
+  AnalogWDGConfig.HighThreshold = 480;
+  AnalogWDGConfig.LowThreshold = 280;
   AnalogWDGConfig.ITMode = ENABLE;
   if (HAL_ADC_AnalogWDGConfig(&hadc3, &AnalogWDGConfig) != HAL_OK)
   {
@@ -418,6 +469,39 @@ static void MX_TIM1_Init(void)
   /* USER CODE BEGIN TIM1_Init 2 */
 
   /* USER CODE END TIM1_Init 2 */
+
+}
+
+/**
+  * @brief USART2 Initialization Function
+  * @param None
+  * @retval None
+  */
+static void MX_USART2_UART_Init(void)
+{
+
+  /* USER CODE BEGIN USART2_Init 0 */
+
+  /* USER CODE END USART2_Init 0 */
+
+  /* USER CODE BEGIN USART2_Init 1 */
+
+  /* USER CODE END USART2_Init 1 */
+  huart2.Instance = USART2;
+  huart2.Init.BaudRate = 115200;
+  huart2.Init.WordLength = UART_WORDLENGTH_8B;
+  huart2.Init.StopBits = UART_STOPBITS_1;
+  huart2.Init.Parity = UART_PARITY_NONE;
+  huart2.Init.Mode = UART_MODE_TX_RX;
+  huart2.Init.HwFlowCtl = UART_HWCONTROL_NONE;
+  huart2.Init.OverSampling = UART_OVERSAMPLING_16;
+  if (HAL_UART_Init(&huart2) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  /* USER CODE BEGIN USART2_Init 2 */
+
+  /* USER CODE END USART2_Init 2 */
 
 }
 
