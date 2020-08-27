@@ -1,4 +1,4 @@
-import QtQuick 2.11
+import QtQuick 2.9
 import QtQuick.Window 2.11
 import QtQuick.Controls 2.4
 import QtQuick.Layouts 1.3
@@ -23,38 +23,41 @@ ApplicationWindow {
         }
     }
     ListView {
+        id: strikeListView
         anchors.bottom: parent.bottom
         height: parent.height / 2
         width: parent.width
         model: targetIndicatorModel
         delegate: Rectangle {
             height: 40
-            width: parent.width
+            width: strikeListView.width
             color: index % 2 ? "white" : "lightgrey"
             Widgets.Text {
                 anchors.left: parent.left
                 height: parent.height
                 font.pointSize: 10
-                text: "X:" + model.xPosition + " Y:" + model.yPosition
+                text: model.score + " Points | Distance to target: " + model.radius + "mm"
                 leftPadding: 5
             }
             Image {
-                function calculateRotationAngle(quadrant) {
-                    switch(quadrant) {
-                    case 1: return 45;
-                    case 2: return -45;
-                    case 3: return -135;
-                    case 4: return 135;
-                    }
+                function calculateRotationAngle(x, y) {
+                    return Math.atan(x/y) * 180 / Math.PI;
                 }
                 anchors.right: parent.right
                 anchors.verticalCenter: parent.verticalCenter
                 anchors.rightMargin: 20
                 height: parent.height - 10
                 width: height
-                source: "/arrow.svg"
+                source: model.score !== 10 ? "/arrow.svg" :"/target.svg"
                 transformOrigin: Item.Center
-                rotation: calculateRotationAngle(model.quadrant)
+                rotation: model.score !== 10 ? calculateRotationAngle(model.xPosition, model.yPosition) : 0
+            }
+        }
+        Connections {
+            target: targetIndicatorModel
+            function onStrikeAdded(x, y)
+            {
+                target.addStrike(x, y)
             }
         }
     }

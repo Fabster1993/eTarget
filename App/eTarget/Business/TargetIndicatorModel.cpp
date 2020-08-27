@@ -10,8 +10,10 @@ TargetIndicatorModel::TargetIndicatorModel(TargetIndicator& targetIndicator) :
     connect(&targetIndicator, &TargetIndicator::dataChanged, this,
     [this]()
     {
-        beginInsertRows(QModelIndex(), this->targetIndicator.getStrikeCount() - 1, this->targetIndicator.getStrikeCount() - 1);
+        const int row = this->targetIndicator.getStrikeCount() - 1;
+        beginInsertRows(QModelIndex(), row, row);
         endInsertRows();
+        emit strikeAdded(this->targetIndicator.getStrikeAt(row).getPosition().x(), this->targetIndicator.getStrikeAt(row).getPosition().y());
     });
 }
 
@@ -30,11 +32,13 @@ QVariant TargetIndicatorModel::data(const QModelIndex& index, int role) const
     if (!index.isValid())
         return QVariant();
 
+    const StrikeInformation& strike = targetIndicator.getStrikeAt(index.row());
     switch(role)
     {
-    case xPositionRole: return QVariant(targetIndicator.getStrikeAt(index.row()).x());
-    case yPositionRole: return QVariant(targetIndicator.getStrikeAt(index.row()).y());
-    case quadrantRole: return QVariant(pointToQuadrant(targetIndicator.getStrikeAt(index.row())));
+    case xPositionRole: return QVariant(targetIndicator.getStrikeAt(index.row()).getPosition().x());
+    case yPositionRole: return QVariant(strike.getPosition().y());
+    case scoreRole: return QVariant(strike.getScore());
+    case radiusRole: return QVariant(strike.getRadius());
     }
     return QVariant();
 }
@@ -44,18 +48,7 @@ QHash<int, QByteArray> TargetIndicatorModel::roleNames() const
     QHash<int, QByteArray> names;
     names[xPositionRole] = "xPosition";
     names[yPositionRole] = "yPosition";
-    names[quadrantRole] = "quadrant";
+    names[scoreRole] = "score";
+    names[radiusRole] = "radius";
     return names;
-}
-
-int TargetIndicatorModel::pointToQuadrant(const QPoint& point) const
-{
-    if(point.x() >= 0 && point.y() >= 0)
-        return 1;
-    if(point.x() < 0 && point.y() >=0)
-        return 2;
-    if(point.x() < 0 && point.y() < 0)
-        return 3;
-    else // (point.x() >= 0 && point.y() < 0)
-        return 4;
 }

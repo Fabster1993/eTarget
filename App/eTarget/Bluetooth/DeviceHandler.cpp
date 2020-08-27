@@ -133,7 +133,7 @@ void DeviceHandler::onNewDataReceived(const QLowEnergyCharacteristic& characteri
     {
         if(dataParser->parse(QString::fromUtf8(value.data())))
         {
-            emit strikeDetected(dataParser->getParseResult());
+            emit strikeDetected(dataParser->getParseResult().first, dataParser->getParseResult().second);
         }
         qDebug() << "Received data: " << QString::fromUtf8(value.data());
     }

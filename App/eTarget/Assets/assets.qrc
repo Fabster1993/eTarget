@@ -3,5 +3,6 @@
         <file>connect.svg</file>
         <file>calibril.ttf</file>
         <file>arrow.svg</file>
+        <file>target.svg</file>
     </qresource>
 </RCC>

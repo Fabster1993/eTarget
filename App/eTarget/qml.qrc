@@ -1,10 +1,10 @@
 <RCC>
     <qresource prefix="/">
-        <file>main.qml</file>
-        <file>Widgets/Text.qml</file>
-        <file>Widgets/AppHeader.qml</file>
-        <file>Widgets/CircleButton.qml</file>
-        <file>Widgets/Target.qml</file>
-        <file>Widgets/StrikePoint.qml</file>
+        <file>QML/main.qml</file>
+        <file>QML/Widgets/AppHeader.qml</file>
+        <file>QML/Widgets/CircleButton.qml</file>
+        <file>QML/Widgets/StrikePoint.qml</file>
+        <file>QML/Widgets/Target.qml</file>
+        <file>QML/Widgets/Text.qml</file>
     </qresource>
 </RCC>

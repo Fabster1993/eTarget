@@ -14,7 +14,7 @@ int main(int argc, char *argv[])
     QGuiApplication app(argc, argv);
 
     Bluetooth::DeviceHandler deviceHandler;
-    deviceHandler.tryToConnect();
+//    deviceHandler.tryToConnect();
 
     Business::TargetIndicator targetIndicator;
     Business::TargetIndicatorModel targetIndicatorModel(targetIndicator);
@@ -24,7 +24,7 @@ int main(int argc, char *argv[])
     QQmlApplicationEngine engine;
     engine.rootContext()->setContextProperty("device", &deviceHandler);
     engine.rootContext()->setContextProperty("targetIndicatorModel", &targetIndicatorModel);
-    engine.load(QUrl(QStringLiteral("qrc:/main.qml")));
+    engine.load(QUrl(QStringLiteral("qrc:/QML/main.qml")));
     if (engine.rootObjects().isEmpty())
         return -1;
 

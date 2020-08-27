@@ -13,12 +13,14 @@ DEFINES += QT_DEPRECATED_WARNINGS
 #DEFINES += QT_DISABLE_DEPRECATED_BEFORE=0x060000    # disables all the APIs deprecated before Qt 6.0.0
 
 SOURCES += \
+    Business/StrikeInformation.cpp \
         main.cpp \
         Bluetooth/DeviceDiscoveryAgent.cpp \
         Bluetooth/DeviceHandler.cpp \
     Business/TargetIndicatorModel.cpp \
     Business/TargetIndicator.cpp \
-    Bluetooth/DataParser.cpp
+    Bluetooth/DataParser.cpp \
+    Business/StrikeLocator.cpp
 
 RESOURCES += qml.qrc \
     Assets/assets.qrc
@@ -37,6 +39,8 @@ else: unix:!android: target.path = /opt/$${TARGET}/bin
 HEADERS += \
     Bluetooth/DeviceDiscoveryAgent.h \
     Bluetooth/DeviceHandler.h \
+    Business/StrikeInformation.h \
     Business/TargetIndicatorModel.h \
     Business/TargetIndicator.h \
-    Bluetooth/DataParser.h
+    Bluetooth/DataParser.h \
+    Business/StrikeLocator.h

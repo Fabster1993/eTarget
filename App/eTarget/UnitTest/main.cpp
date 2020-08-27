@@ -1,15 +1,19 @@
 #include "TestDataParser.h"
+#include "TestStrikeLocator.h"
+#include "TestStrikeInformation.h"
 
 int main(int argc, char *argv[])
 {
     quint16 status = 0;
-    QList<QObject*> testObjects;
+    QList<TestClass*> testObjects;
 
     testObjects.append(new TestDataParser());
+    testObjects.append(new TestStrikeLocator());
+    testObjects.append(new TestStrikeInformation());
 
-    foreach(QObject* testObject, testObjects)
+    foreach(auto testObject, testObjects)
     {
-        status |= QTest::qExec(testObject, argc, argv);
+        status |= testObject->execute(argc, argv);
     }
 
     return status;

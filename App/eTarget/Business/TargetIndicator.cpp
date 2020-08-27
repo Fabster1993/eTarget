@@ -4,13 +4,18 @@ using namespace Business;
 
 TargetIndicator::TargetIndicator(QObject *parent) : QObject(parent)
 {
-    strikes.append(QPoint(100, 100));
-    strikes.append(QPoint(-100, 100));
-    strikes.append(QPoint(-100, -100));
-    strikes.append(QPoint(100, -100));
+    // temporary
+    timer.start(500);
+    connect(&timer, &QTimer::timeout, this,
+    [this]()
+    {
+        QPoint position(generator.bounded(-50, 50), generator.bounded(-50, 50));
+        onStrikeDetected(position, static_cast<quint16>(generator.bounded(0, 1000)));
+
+    });
 }
 
-QPoint TargetIndicator::getStrikeAt(int row) const
+const StrikeInformation& TargetIndicator::getStrikeAt(int row) const
 {
     return strikes.at(row);
 }
@@ -20,8 +25,9 @@ int TargetIndicator::getStrikeCount() const
     return strikes.length();
 }
 
-void TargetIndicator::onStrikeDetected(const QPoint& point)
+void TargetIndicator::onStrikeDetected(const QPoint& position, const quint16 radius)
 {
-    strikes.append(point);
+    StrikeInformation detectedStrike(position, radius);
+    strikes.append(detectedStrike);
     emit dataChanged();
 }

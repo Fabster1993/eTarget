@@ -3,6 +3,10 @@
 
 #include <QObject>
 #include <QPoint>
+#include "StrikeInformation.h"
+
+#include <QTimer> // temporary
+#include <QRandomGenerator> // temporary
 
 namespace Business
 {
@@ -11,16 +15,19 @@ namespace Business
         Q_OBJECT
     public:
         explicit TargetIndicator(QObject *parent = nullptr);
-        QPoint getStrikeAt(int row) const;
+        const StrikeInformation& getStrikeAt(int row) const;
         int getStrikeCount() const;
 
     signals:
         void dataChanged();
 
     public slots:
-        void onStrikeDetected(const QPoint& point);
+        void onStrikeDetected(const QPoint& position, const quint16 radius);
     private:
-        QList<QPoint> strikes;
+        QList<StrikeInformation> strikes;
+
+        QTimer timer; // temporary
+        QRandomGenerator generator; // temporary
     };
 }
 

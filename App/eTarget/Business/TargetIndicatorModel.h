@@ -15,20 +15,20 @@ namespace Business
         {
             xPositionRole = Qt::UserRole,
             yPositionRole,
+            scoreRole,
+            radiusRole,
             quadrantRole
         };
         explicit TargetIndicatorModel(TargetIndicator& targetIndicator);
 
     signals:
-
-    public slots:
+        void strikeAdded(const int xPosition, const int yPosition);
     public:
         int rowCount(const QModelIndex& parent) const;
         QVariant data(const QModelIndex& index, int role) const;
         QHash<int, QByteArray> roleNames() const;
     private:
         TargetIndicator& targetIndicator;
-        int pointToQuadrant(const QPoint& point) const;
     };
 }
 

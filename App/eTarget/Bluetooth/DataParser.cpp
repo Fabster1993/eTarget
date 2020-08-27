@@ -18,13 +18,13 @@ bool DataParser::parse(const QString& data)
         return false;
     }
     QString xPosition = list.first().remove("X");
-    parseResult.setX(xPosition.toInt());
+    parseResult.first.setX(xPosition.toInt());
     QString yPosition = list.at(1);
-    parseResult.setY(yPosition.toInt());
+    parseResult.first.setY(yPosition.toInt());
     return true;
 }
 
-QPoint DataParser::getParseResult() const
+QPair<QPoint, quint16> DataParser::getParseResult() const
 {
     return parseResult;
 }

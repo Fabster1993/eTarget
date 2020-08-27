@@ -2,6 +2,7 @@
 #define DATAPARSER_H
 
 #include <QPoint>
+#include <QPair>
 
 namespace Bluetooth 
 {
@@ -10,10 +11,10 @@ namespace Bluetooth
     public:
         DataParser();
         bool parse(const QString& data);
-        QPoint getParseResult() const;
+        QPair<QPoint, quint16> getParseResult() const;
         
     private:
-        QPoint parseResult;
+        QPair<QPoint, quint16> parseResult;
     };
 }
 

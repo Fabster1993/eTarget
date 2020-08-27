@@ -35,7 +35,7 @@ namespace Bluetooth
 
     signals:
         void connectedChanged();
-        void strikeDetected(const QPoint& point);
+        void strikeDetected(const QPoint& position, const quint16 radius);
 
     public slots:
         void tryToConnect();
