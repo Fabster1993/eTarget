@@ -35,6 +35,8 @@
 								</option>
 								<option IS_BUILTIN_EMPTY="false" IS_VALUE_EMPTY="false" id="com.st.stm32cube.ide.mcu.gnu.managedbuild.tool.assembler.option.includepaths.1841898076" name="Include paths (-I)" superClass="com.st.stm32cube.ide.mcu.gnu.managedbuild.tool.assembler.option.includepaths" valueType="includePath">
 									<listOptionValue builtIn="false" value="../Drivers/Eigen"/>
+									<listOptionValue builtIn="false" value="../Drivers/GSL"/>
+									<listOptionValue builtIn="false" value="../Drivers/math"/>
 								</option>
 								<inputType id="com.st.stm32cube.ide.mcu.gnu.managedbuild.tool.assembler.input.1788498275" superClass="com.st.stm32cube.ide.mcu.gnu.managedbuild.tool.assembler.input"/>
 							</tool>
@@ -58,6 +60,8 @@
 									<listOptionValue builtIn="false" value="../Middlewares/ST/BlueNRG-MS/hci/hci_tl_patterns/Basic"/>
 									<listOptionValue builtIn="false" value="../BlueNRG-MS/Target"/>
 									<listOptionValue builtIn="false" value="../Drivers/Eigen"/>
+									<listOptionValue builtIn="false" value="../Drivers/GSL"/>
+									<listOptionValue builtIn="false" value="../Drivers/math"/>
 								</option>
 								<inputType id="com.st.stm32cube.ide.mcu.gnu.managedbuild.tool.c.compiler.input.c.104980730" superClass="com.st.stm32cube.ide.mcu.gnu.managedbuild.tool.c.compiler.input.c"/>
 							</tool>
@@ -75,6 +79,8 @@
 									<listOptionValue builtIn="false" value="../Middlewares/ST/BlueNRG-MS/hci/hci_tl_patterns/Basic"/>
 									<listOptionValue builtIn="false" value="../BlueNRG-MS/Target"/>
 									<listOptionValue builtIn="false" value="../Drivers/Eigen"/>
+									<listOptionValue builtIn="false" value="../Drivers/GSL"/>
+									<listOptionValue builtIn="false" value="../Drivers/math"/>
 								</option>
 								<option IS_BUILTIN_EMPTY="false" IS_VALUE_EMPTY="false" id="com.st.stm32cube.ide.mcu.gnu.managedbuild.tool.cpp.compiler.option.definedsymbols.627387194" name="Define symbols (-D)" superClass="com.st.stm32cube.ide.mcu.gnu.managedbuild.tool.cpp.compiler.option.definedsymbols" useByScannerDiscovery="false" valueType="definedSymbols">
 									<listOptionValue builtIn="false" value="USE_STM32F4XX_NUCLEO"/>
@@ -155,6 +161,8 @@
 									<listOptionValue builtIn="false" value="../Drivers/BlueNRG-MS/includes"/>
 									<listOptionValue builtIn="false" value="../Drivers/BlueNRG-MS/utils"/>
 									<listOptionValue builtIn="false" value="../Drivers/Eigen"/>
+									<listOptionValue builtIn="false" value="../Drivers/GSL"/>
+									<listOptionValue builtIn="false" value="../Drivers/math"/>
 								</option>
 								<inputType id="com.st.stm32cube.ide.mcu.gnu.managedbuild.tool.assembler.input.747944194" superClass="com.st.stm32cube.ide.mcu.gnu.managedbuild.tool.assembler.input"/>
 							</tool>
@@ -178,6 +186,8 @@
 									<listOptionValue builtIn="false" value="../BlueNRG-MS/Target"/>
 									<listOptionValue builtIn="false" value="../BlueNRG_MS/Target"/>
 									<listOptionValue builtIn="false" value="../Drivers/Eigen"/>
+									<listOptionValue builtIn="false" value="../Drivers/GSL"/>
+									<listOptionValue builtIn="false" value="../Drivers/math"/>
 								</option>
 								<inputType id="com.st.stm32cube.ide.mcu.gnu.managedbuild.tool.c.compiler.input.c.1532844334" superClass="com.st.stm32cube.ide.mcu.gnu.managedbuild.tool.c.compiler.input.c"/>
 							</tool>
@@ -196,6 +206,8 @@
 									<listOptionValue builtIn="false" value="../BlueNRG-MS/Target"/>
 									<listOptionValue builtIn="false" value="../BlueNRG_MS/Target"/>
 									<listOptionValue builtIn="false" value="../Drivers/Eigen"/>
+									<listOptionValue builtIn="false" value="../Drivers/GSL"/>
+									<listOptionValue builtIn="false" value="../Drivers/math"/>
 								</option>
 								<option IS_BUILTIN_EMPTY="false" IS_VALUE_EMPTY="false" id="com.st.stm32cube.ide.mcu.gnu.managedbuild.tool.cpp.compiler.option.definedsymbols.1099864579" name="Define symbols (-D)" superClass="com.st.stm32cube.ide.mcu.gnu.managedbuild.tool.cpp.compiler.option.definedsymbols" useByScannerDiscovery="false" valueType="definedSymbols">
 									<listOptionValue builtIn="false" value="USE_STM32F4XX_NUCLEO"/>

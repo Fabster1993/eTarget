@@ -27,7 +27,8 @@
 #include <stdio.h>
 #include <string.h>
 
-#include <Dense>
+#include <math.h>
+
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -79,35 +80,60 @@ struct Position
   int y;
 };
 
-Position sensorA = {156, -90};
+Position sensorA = {-156, -90};
 Position sensorB = {0, 180};
-Position sensorC = {-156, -90};
-const float c = 0.08f; // mm / 100ns
-
-using namespace Eigen;
+Position sensorC = {156, -90};
+const double c = 550; // m/s
+const double Ax = sensorA.x / 1000.0; // m
+const double Ay = sensorA.y / 1000.0; // m
+const double Bx = sensorB.x / 1000.0; // m
+const double By = sensorB.y / 1000.0; // m
+const double Cx = sensorC.x / 1000.0; // m
+const double Cy = sensorC.y / 1000.0; // m
+const double nominalTargetRadius = By;
 
 Position calculatePosition()
 {
-  float tA = timeSensorA; // to ms
-  float tB = timeSensorB; // to ms
-  float tC = timeSensorC; // to ms
-  float Ax = sensorA.x;
-  float Ay = sensorA.y;
-  float Bx = sensorB.x;
-  float By = sensorB.y;
-  float Cx = sensorC.x;
-  float Cy = sensorC.y;
+  double tA = timeSensorA / 10000000.0; // to sec
+  double tB = timeSensorB / 10000000.0; // to sec
+  double tC = timeSensorC / 10000000.0; // to sec
+  double nominator = (2 * (Ax * (By - Cy) - Ay * (Bx - Cx) + Bx * Cy - By * Cx));
 
-  Matrix3f A;
-  A << (2 * (Ax - Bx)),      (2 * (Ay - By)),    (2 * c * c * (tB - tA)),
-       (2 * (Bx - Cx)),      (2 * (By - Cy)),    (2 * c * c * (tC - tB)),
-       (2 * (Cx - Ax)),      (2 * (Cy - Ay)),    (2 * c * c * (tA - tC));
-  Vector3f b;
-  b << (Ax * Ax + Ay * Ay - Bx * Bx - By * By + c * c *(tB * tB - tA * tA)),
-       (Bx * Bx + By * By - Cx * Cx - Cy * Cy + c * c *(tC * tC - tB * tB)),
-       (Cx * Cx + Cy * Cy - Ax * Ax - Ay * Ay + c * c *(tA * tA - tC * tC));
-  Vector3f x = A.colPivHouseholderQr().solve(b);
-  return { static_cast<int>(x[0]), static_cast<int>(x[1]) };
+  double pxt = (2 * c * c * (Ay * (tC - tB) + By * (tA - tC) + Cy * (tB - tA))) / nominator;
+
+  double pxc = (-c * c * (Ay * (-tB - tC) * (tB - tC) - By * (-tA - tC) * (tA - tC) + Cy * (-tA - tB) * (tA -tB)) -
+               (-Ax * Ax * (By - Cy) - Ay * Ay * (By - Cy) + Ay * (Bx * Bx + By * By - Cx * Cx - Cy * Cy) - Bx * Bx * Cy - By * (By * Cy - Cx * Cx - Cy * Cy))) /
+               nominator;
+
+  double pyt = (2 * c * c * (Ax * (tB - tC) + Bx *(tC - tA) + Cx * (tA -tB))) / nominator;
+
+  double pyc = (c * c * (Ax * (-tB - tC) * (tB - tC) - Bx * (-tA - tC) * (tA - tC) + Cx * (-tA - tB) * (tA - tB)) -
+                Ax * Ax * (Bx - Cx) + Ax * (Bx * Bx + By * By - Cx * Cx - Cy * Cy) - Ay * Ay * (Bx - Cx) - Bx * Bx * Cx + Bx * (Cx * Cx + Cy * Cy) - By * By * Cx) /
+               nominator;
+
+  double A = pxt * pxt + pyt * pyt - c * c;
+  double B = 2 * pxt * pxc - 2 * Cx * pxt + 2 * pyt * pyc - 2 * Cy * pyt + 2 * c * c * tC;
+  double C = pxc * pxc - 2 * Cx * pxc + Cx * Cx + pyc * pyc - 2 * Cy * pyc + Cy * Cy - c * c * tC * tC;
+
+  double t01 = (-B + std::sqrt(B * B - 4 * A * C)) / (2 * A);
+  double t02 = (-B - std::sqrt(B * B - 4 * A * C)) / (2 * A);
+
+  double t0 = 0;
+  if(t01 <= 0)
+  {
+      t0 = t01;
+  }
+  else if(t02 <= 0)
+  {
+      t0 = t02;
+  }
+  else
+  {
+      // This should never happen
+  }
+  double Px = pxt * t0 + pxc;
+  double Py = pyt * t0 + pyc;
+  return { static_cast<int>(Px * 100 / nominalTargetRadius), static_cast<int>(Py * 100 / nominalTargetRadius) };
 }
 /* USER CODE END PFP */
 
@@ -165,7 +191,7 @@ int main(void)
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
-    if(registeredSensorA && registeredSensorC)
+    if(registeredSensorA && registeredSensorB && registeredSensorC)
     {
       uint8_t message[100];
       Position strikePosition = calculatePosition();
@@ -174,7 +200,8 @@ int main(void)
       HAL_UART_Transmit(&huart2, message, strlen((char*)message), 0xFFFF);
       sprintf((char*)message,"||| A: %u B: %u C: %u\r\n", (unsigned)timeSensorA / 10, (unsigned)timeSensorB / 10, (unsigned)timeSensorC / 10);
       HAL_UART_Transmit(&huart2, message, strlen((char*)message), 0xFFFF);
-      bluetooth.updatePositionCharacteristics(timeSensorA / 10, timeSensorC / 10);
+
+      bluetooth.updatePositionCharacteristics(strikePosition.x, strikePosition.y);
       HAL_Delay(1000);
       timeSensorA = 0;
       timeSensorB = 0;
@@ -282,8 +309,8 @@ static void MX_ADC1_Init(void)
   /** Configure the analog watchdog
   */
   AnalogWDGConfig.WatchdogMode = ADC_ANALOGWATCHDOG_ALL_REG;
-  AnalogWDGConfig.HighThreshold = 480;
-  AnalogWDGConfig.LowThreshold = 280;
+  AnalogWDGConfig.HighThreshold = 600;
+  AnalogWDGConfig.LowThreshold = 160;
   AnalogWDGConfig.ITMode = ENABLE;
   if (HAL_ADC_AnalogWDGConfig(&hadc1, &AnalogWDGConfig) != HAL_OK)
   {
@@ -343,8 +370,8 @@ static void MX_ADC2_Init(void)
   /** Configure the analog watchdog
   */
   AnalogWDGConfig.WatchdogMode = ADC_ANALOGWATCHDOG_ALL_REG;
-  AnalogWDGConfig.HighThreshold = 480;
-  AnalogWDGConfig.LowThreshold = 280;
+  AnalogWDGConfig.HighThreshold = 600;
+  AnalogWDGConfig.LowThreshold = 160;
   AnalogWDGConfig.ITMode = ENABLE;
   if (HAL_ADC_AnalogWDGConfig(&hadc2, &AnalogWDGConfig) != HAL_OK)
   {
@@ -404,8 +431,8 @@ static void MX_ADC3_Init(void)
   /** Configure the analog watchdog
   */
   AnalogWDGConfig.WatchdogMode = ADC_ANALOGWATCHDOG_ALL_REG;
-  AnalogWDGConfig.HighThreshold = 480;
-  AnalogWDGConfig.LowThreshold = 280;
+  AnalogWDGConfig.HighThreshold = 600;
+  AnalogWDGConfig.LowThreshold = 160;
   AnalogWDGConfig.ITMode = ENABLE;
   if (HAL_ADC_AnalogWDGConfig(&hadc3, &AnalogWDGConfig) != HAL_OK)
   {
