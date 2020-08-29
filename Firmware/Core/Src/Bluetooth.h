@@ -21,7 +21,7 @@ public:
   static void clientEventCallback(void* receivedData);
   bool registerPositionService();
   static bool setDeviceDiscoverable();
-  bool updatePositionCharacteristics(uint32_t xPosition, uint32_t yPosition);
+  bool updatePositionCharacteristics(int32_t xPosition, int32_t yPosition);
 private:
   uint8_t address[addressSize];
   uint16_t positionServiceHandle;

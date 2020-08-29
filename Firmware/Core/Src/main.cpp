@@ -83,7 +83,7 @@ struct Position
 Position sensorA = {-156, -90};
 Position sensorB = {0, 180};
 Position sensorC = {156, -90};
-const double c = 550; // m/s
+const double c = 360; // m/s
 const double Ax = sensorA.x / 1000.0; // m
 const double Ay = sensorA.y / 1000.0; // m
 const double Bx = sensorB.x / 1000.0; // m
@@ -133,6 +133,12 @@ Position calculatePosition()
   }
   double Px = pxt * t0 + pxc;
   double Py = pyt * t0 + pyc;
+  uint8_t message[100];
+  sprintf((char*)message,"X: %d Y: %d", static_cast<int>(Px * 1000), static_cast<int>(Py * 1000 ));
+  HAL_UART_Transmit(&huart2, message, strlen((char*)message), 0xFFFF);
+  sprintf((char*)message,"||| A: %u B: %u C: %u\r\n", (unsigned)timeSensorA / 10, (unsigned)timeSensorB / 10, (unsigned)timeSensorC / 10);
+  HAL_UART_Transmit(&huart2, message, strlen((char*)message), 0xFFFF);
+
   return { static_cast<int>(Px * 100 / nominalTargetRadius), static_cast<int>(Py * 100 / nominalTargetRadius) };
 }
 /* USER CODE END PFP */
@@ -193,14 +199,7 @@ int main(void)
     /* USER CODE BEGIN 3 */
     if(registeredSensorA && registeredSensorB && registeredSensorC)
     {
-      uint8_t message[100];
       Position strikePosition = calculatePosition();
-
-      sprintf((char*)message,"X: %d Y: %d", (int)strikePosition.x, (int)strikePosition.y );
-      HAL_UART_Transmit(&huart2, message, strlen((char*)message), 0xFFFF);
-      sprintf((char*)message,"||| A: %u B: %u C: %u\r\n", (unsigned)timeSensorA / 10, (unsigned)timeSensorB / 10, (unsigned)timeSensorC / 10);
-      HAL_UART_Transmit(&huart2, message, strlen((char*)message), 0xFFFF);
-
       bluetooth.updatePositionCharacteristics(strikePosition.x, strikePosition.y);
       HAL_Delay(1000);
       timeSensorA = 0;

@@ -123,10 +123,10 @@ bool Bluetooth::setDeviceDiscoverable()
   return true;
 }
 
-bool Bluetooth::updatePositionCharacteristics(uint32_t xPosition, uint32_t yPosition)
+bool Bluetooth::updatePositionCharacteristics(int32_t xPosition, int32_t yPosition)
 {
   uint8_t message[positionMessageLength];
-  sprintf((char*)message,"X%uY%u", (unsigned)xPosition, (unsigned)yPosition);
+  sprintf((char*)message,"X%dY%d", (unsigned)xPosition, (unsigned)yPosition);
   if(aci_gatt_update_char_value(positionServiceHandle, positionCharacteristicHandle, 0, positionMessageLength, message) != BLE_STATUS_SUCCESS)
     return false;
 
