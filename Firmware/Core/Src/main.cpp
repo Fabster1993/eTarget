@@ -23,6 +23,7 @@
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
 #include "Bluetooth.h"
+#include "MeasurementRecord.h"
 #include "hci.h"
 #include <stdio.h>
 #include <string.h>
@@ -38,7 +39,12 @@
 
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
-
+struct Position
+{
+  Position(int x, int y) : x(x),y(y){};
+  int x;
+  int y;
+};
 /* USER CODE END PD */
 
 /* Private macro -------------------------------------------------------------*/
@@ -47,105 +53,87 @@
 /* USER CODE END PM */
 
 /* Private variables ---------------------------------------------------------*/
-ADC_HandleTypeDef hadc1;
-ADC_HandleTypeDef hadc2;
-ADC_HandleTypeDef hadc3;
+DAC_HandleTypeDef hdac;
 
 TIM_HandleTypeDef htim1;
 
-UART_HandleTypeDef huart2;
-
 /* USER CODE BEGIN PV */
-uint8_t volatile measurementOngoing = 0;
-uint8_t volatile registeredSensorA = 0;
-uint8_t volatile registeredSensorB = 0;
-uint8_t volatile registeredSensorC = 0;
-uint32_t volatile timeSensorA = 0;
-uint32_t volatile timeSensorB = 0;
-uint32_t volatile timeSensorC = 0;
+MeasurementRecord measureRecord;
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
 void SystemClock_Config(void);
 static void MX_GPIO_Init(void);
-static void MX_ADC2_Init(void);
 static void MX_TIM1_Init(void);
-static void MX_ADC1_Init(void);
-static void MX_ADC3_Init(void);
-static void MX_USART2_UART_Init(void);
+static void MX_DAC_Init(void);
 /* USER CODE BEGIN PFP */
-struct Position
-{
-  int x;
-  int y;
-};
 
-Position sensorA = {-156, -90};
+Position sensorA = {180, 0};
 Position sensorB = {0, 180};
-Position sensorC = {156, -90};
-const double c = 360; // m/s
-const double Ax = sensorA.x / 1000.0; // m
-const double Ay = sensorA.y / 1000.0; // m
-const double Bx = sensorB.x / 1000.0; // m
-const double By = sensorB.y / 1000.0; // m
-const double Cx = sensorC.x / 1000.0; // m
-const double Cy = sensorC.y / 1000.0; // m
-const double nominalTargetRadius = By;
+Position sensorC = {-180, 0};
+Position sensorD = {0, -180};
+const long double Ax = static_cast<long double>(sensorA.x) / 1000.0;
+const long double Ay = static_cast<long double>(sensorA.y) / 1000.0;
+const long double Bx = static_cast<long double>(sensorB.x) / 1000.0;
+const long double By = static_cast<long double>(sensorB.y) / 1000.0;
+const long double Cx = static_cast<long double>(sensorC.x) / 1000.0;
+const long double Cy = static_cast<long double>(sensorC.y) / 1000.0;
+const long double Dx = static_cast<long double>(sensorD.x) / 1000.0;
+const long double Dy = static_cast<long double>(sensorD.y) / 1000.0;
+const long double nominalTargetRadius = By;
+const int maxC = 5000;
 
-Position calculatePosition()
-{
-  double tA = timeSensorA / 10000000.0; // to sec
-  double tB = timeSensorB / 10000000.0; // to sec
-  double tC = timeSensorC / 10000000.0; // to sec
-  double nominator = (2 * (Ax * (By - Cy) - Ay * (Bx - Cx) + Bx * Cy - By * Cx));
-
-  double pxt = (2 * c * c * (Ay * (tC - tB) + By * (tA - tC) + Cy * (tB - tA))) / nominator;
-
-  double pxc = (-c * c * (Ay * (-tB - tC) * (tB - tC) - By * (-tA - tC) * (tA - tC) + Cy * (-tA - tB) * (tA -tB)) -
-               (-Ax * Ax * (By - Cy) - Ay * Ay * (By - Cy) + Ay * (Bx * Bx + By * By - Cx * Cx - Cy * Cy) - Bx * Bx * Cy - By * (By * Cy - Cx * Cx - Cy * Cy))) /
-               nominator;
-
-  double pyt = (2 * c * c * (Ax * (tB - tC) + Bx *(tC - tA) + Cx * (tA -tB))) / nominator;
-
-  double pyc = (c * c * (Ax * (-tB - tC) * (tB - tC) - Bx * (-tA - tC) * (tA - tC) + Cx * (-tA - tB) * (tA - tB)) -
-                Ax * Ax * (Bx - Cx) + Ax * (Bx * Bx + By * By - Cx * Cx - Cy * Cy) - Ay * Ay * (Bx - Cx) - Bx * Bx * Cx + Bx * (Cx * Cx + Cy * Cy) - By * By * Cx) /
-               nominator;
-
-  double A = pxt * pxt + pyt * pyt - c * c;
-  double B = 2 * pxt * pxc - 2 * Cx * pxt + 2 * pyt * pyc - 2 * Cy * pyt + 2 * c * c * tC;
-  double C = pxc * pxc - 2 * Cx * pxc + Cx * Cx + pyc * pyc - 2 * Cy * pyc + Cy * Cy - c * c * tC * tC;
-
-  double t01 = (-B + std::sqrt(B * B - 4 * A * C)) / (2 * A);
-  double t02 = (-B - std::sqrt(B * B - 4 * A * C)) / (2 * A);
-
-  double t0 = 0;
-  if(t01 <= 0)
-  {
-      t0 = t01;
-  }
-  else if(t02 <= 0)
-  {
-      t0 = t02;
-  }
-  else
-  {
-      // This should never happen
-  }
-  double Px = pxt * t0 + pxc;
-  double Py = pyt * t0 + pyc;
-  uint8_t message[100];
-  sprintf((char*)message,"X: %d Y: %d", static_cast<int>(Px * 1000), static_cast<int>(Py * 1000 ));
-  HAL_UART_Transmit(&huart2, message, strlen((char*)message), 0xFFFF);
-  sprintf((char*)message,"||| A: %u B: %u C: %u\r\n", (unsigned)timeSensorA / 10, (unsigned)timeSensorB / 10, (unsigned)timeSensorC / 10);
-  HAL_UART_Transmit(&huart2, message, strlen((char*)message), 0xFFFF);
-
-  return { static_cast<int>(Px * 100 / nominalTargetRadius), static_cast<int>(Py * 100 / nominalTargetRadius) };
-}
 /* USER CODE END PFP */
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
+Position calculatePosition(const double timeSensorA, const double timeSensorB, const double timeSensorC, const double timeSensorD)
+{
+  long double tA = timeSensorA / 10000000;
+  long double tB = timeSensorB / 10000000;
+  long double tC = timeSensorC / 10000000;
+  long double tD = timeSensorD / 10000000;
 
+  long double nominator = (2 * (Ax * (By * (tC - tD) + Dy * (tB - tC)) - (By * (tA - tD) - Dy * (tA - tB)) * Cx));
+
+  long double pxk = (Ax * Ax * (By * (tC - tD) + Dy * (tB - tC)) - By * By * Dy * (tA - tC) - By * (Cx * Cx * (tA - tD) - Dy * Dy * (tA -tC)) + Cx * Cx * Dy * (tA - tB)) /
+      nominator;
+
+  long double pxc = ((By * (tA - tD) * (tC - tD) + Dy * (tA - tB) * (tB -tC)) * (tC - tA)) /
+      nominator;
+
+  long double pyk = (Ax * Ax * Cx * (tB - tD) + Ax * (By * By * (tC - tD) - Cx * Cx * (tB - tD) + Dy * Dy * (tB - tC)) - (By * By * (tA - tD) - Dy * Dy * (tA - tB)) * Cx) /
+      nominator;
+  long double pyc = (Ax * (tB - tC) * (tC - tD) + Cx * (tA * tA - tA * (tB + tD) + tB * tD)) * (tD - tB) /
+      nominator;
+
+  long double t0c = (Ax * (By * (tC * tC - tD * tD) + Dy * (tB * tB - tC * tC)) - (By * (tA * tA - tD * tD) - Dy * (tA * tA - tB * tB)) * Cx) /
+      nominator;
+
+  long double t0k = ((Ax - Cx) * (Ax * Cx - By * Dy) * (By - Dy)) /
+      nominator;
+
+  long double finalC = 0;
+  long double error = 100000;
+
+  for(int index = 1; index < maxC; ++index)
+  {
+    long double c = static_cast<long double>(index);
+    long double currentError = std::abs((((pxk + pxc * c * c) - Ax) * ((pxk + pxc * c * c) - Ax) + (pyk + pyc * c * c) * (pyk + pyc * c * c)) - ((c * (tA - (t0c + t0k / (c * c)))) * (c * (tA - (t0c + t0k / (c * c))))));
+    if(currentError < error)
+    {
+      error = currentError;
+      finalC = c;
+    }
+  }
+
+  long double c = finalC / 2;
+
+  long double Px = (pxk + pxc * c * c) * 1000.0;
+  long double Py = (pyk + pyc * c * c) * 1000.0;
+
+  return Position(static_cast<int>(Px), static_cast<int>(Py));
+}
 /* USER CODE END 0 */
 
 /**
@@ -175,18 +163,16 @@ int main(void)
 
   /* Initialize all configured peripherals */
   MX_GPIO_Init();
-  MX_ADC2_Init();
   MX_TIM1_Init();
-  MX_ADC1_Init();
-  MX_ADC3_Init();
-  MX_USART2_UART_Init();
+  MX_DAC_Init();
   /* USER CODE BEGIN 2 */
-  HAL_ADC_Start(&hadc1);
-  HAL_ADC_Start(&hadc2);
-  HAL_ADC_Start(&hadc3);
-  HAL_TIM_Base_Start(&htim1);
   Bluetooth bluetooth;
   bluetooth.initialize();
+
+
+  HAL_TIM_Base_Start(&htim1);
+  HAL_DAC_Start(&hdac, DAC_CHANNEL_2);
+  HAL_DAC_SetValue(&hdac, DAC_CHANNEL_2, DAC_ALIGN_12B_R, 200);
 
   /* USER CODE END 2 */
 
@@ -197,23 +183,17 @@ int main(void)
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
-    if(registeredSensorA && registeredSensorB && registeredSensorC)
-    {
-      Position strikePosition = calculatePosition();
-      bluetooth.updatePositionCharacteristics(strikePosition.x, strikePosition.y);
-      HAL_Delay(1000);
-      timeSensorA = 0;
-      timeSensorB = 0;
-      timeSensorC = 0;
-      registeredSensorA = 0;
-      registeredSensorB = 0;
-      registeredSensorC = 0;
-      measurementOngoing = 0;
-    }
-    if(!measurementOngoing)
-    {
-      hci_user_evt_proc();
-    }
+  if(measureRecord.newRecordCapured())
+  {
+    Position strikePosition = calculatePosition(measureRecord.timeSensorA, measureRecord.timeSensorB, measureRecord.timeSensorC, measureRecord.timeSensorD);
+    measureRecord.reset();
+    bluetooth.updatePositionCharacteristics(strikePosition.x, strikePosition.y);
+  }
+  if(measureRecord.measurementOngoing && htim1.Instance->CNT > measureRecord.maxMeasureTime)
+  { // Not all sensors were triggered, therefore reset and wait for another impact
+    measureRecord.reset();
+  }
+    hci_user_evt_proc();
   }
   /* USER CODE END 3 */
 }
@@ -270,185 +250,40 @@ void SystemClock_Config(void)
 }
 
 /**
-  * @brief ADC1 Initialization Function
+  * @brief DAC Initialization Function
   * @param None
   * @retval None
   */
-static void MX_ADC1_Init(void)
+static void MX_DAC_Init(void)
 {
 
-  /* USER CODE BEGIN ADC1_Init 0 */
+  /* USER CODE BEGIN DAC_Init 0 */
 
-  /* USER CODE END ADC1_Init 0 */
+  /* USER CODE END DAC_Init 0 */
 
-  ADC_AnalogWDGConfTypeDef AnalogWDGConfig = {0};
-  ADC_ChannelConfTypeDef sConfig = {0};
+  DAC_ChannelConfTypeDef sConfig = {0};
 
-  /* USER CODE BEGIN ADC1_Init 1 */
+  /* USER CODE BEGIN DAC_Init 1 */
 
-  /* USER CODE END ADC1_Init 1 */
-  /** Configure the global features of the ADC (Clock, Resolution, Data Alignment and number of conversion)
+  /* USER CODE END DAC_Init 1 */
+  /** DAC Initialization
   */
-  hadc1.Instance = ADC1;
-  hadc1.Init.ClockPrescaler = ADC_CLOCK_SYNC_PCLK_DIV4;
-  hadc1.Init.Resolution = ADC_RESOLUTION_10B;
-  hadc1.Init.ScanConvMode = ENABLE;
-  hadc1.Init.ContinuousConvMode = ENABLE;
-  hadc1.Init.DiscontinuousConvMode = DISABLE;
-  hadc1.Init.ExternalTrigConvEdge = ADC_EXTERNALTRIGCONVEDGE_NONE;
-  hadc1.Init.ExternalTrigConv = ADC_SOFTWARE_START;
-  hadc1.Init.DataAlign = ADC_DATAALIGN_RIGHT;
-  hadc1.Init.NbrOfConversion = 1;
-  hadc1.Init.DMAContinuousRequests = DISABLE;
-  hadc1.Init.EOCSelection = ADC_EOC_SEQ_CONV;
-  if (HAL_ADC_Init(&hadc1) != HAL_OK)
+  hdac.Instance = DAC;
+  if (HAL_DAC_Init(&hdac) != HAL_OK)
   {
     Error_Handler();
   }
-  /** Configure the analog watchdog
+  /** DAC channel OUT2 config
   */
-  AnalogWDGConfig.WatchdogMode = ADC_ANALOGWATCHDOG_ALL_REG;
-  AnalogWDGConfig.HighThreshold = 600;
-  AnalogWDGConfig.LowThreshold = 160;
-  AnalogWDGConfig.ITMode = ENABLE;
-  if (HAL_ADC_AnalogWDGConfig(&hadc1, &AnalogWDGConfig) != HAL_OK)
+  sConfig.DAC_Trigger = DAC_TRIGGER_NONE;
+  sConfig.DAC_OutputBuffer = DAC_OUTPUTBUFFER_ENABLE;
+  if (HAL_DAC_ConfigChannel(&hdac, &sConfig, DAC_CHANNEL_2) != HAL_OK)
   {
     Error_Handler();
   }
-  /** Configure for the selected ADC regular channel its corresponding rank in the sequencer and its sample time.
-  */
-  sConfig.Channel = ADC_CHANNEL_11;
-  sConfig.Rank = 1;
-  sConfig.SamplingTime = ADC_SAMPLETIME_3CYCLES;
-  if (HAL_ADC_ConfigChannel(&hadc1, &sConfig) != HAL_OK)
-  {
-    Error_Handler();
-  }
-  /* USER CODE BEGIN ADC1_Init 2 */
+  /* USER CODE BEGIN DAC_Init 2 */
 
-  /* USER CODE END ADC1_Init 2 */
-
-}
-
-/**
-  * @brief ADC2 Initialization Function
-  * @param None
-  * @retval None
-  */
-static void MX_ADC2_Init(void)
-{
-
-  /* USER CODE BEGIN ADC2_Init 0 */
-
-  /* USER CODE END ADC2_Init 0 */
-
-  ADC_AnalogWDGConfTypeDef AnalogWDGConfig = {0};
-  ADC_ChannelConfTypeDef sConfig = {0};
-
-  /* USER CODE BEGIN ADC2_Init 1 */
-
-  /* USER CODE END ADC2_Init 1 */
-  /** Configure the global features of the ADC (Clock, Resolution, Data Alignment and number of conversion)
-  */
-  hadc2.Instance = ADC2;
-  hadc2.Init.ClockPrescaler = ADC_CLOCK_SYNC_PCLK_DIV4;
-  hadc2.Init.Resolution = ADC_RESOLUTION_10B;
-  hadc2.Init.ScanConvMode = ENABLE;
-  hadc2.Init.ContinuousConvMode = ENABLE;
-  hadc2.Init.DiscontinuousConvMode = DISABLE;
-  hadc2.Init.ExternalTrigConvEdge = ADC_EXTERNALTRIGCONVEDGE_NONE;
-  hadc2.Init.ExternalTrigConv = ADC_SOFTWARE_START;
-  hadc2.Init.DataAlign = ADC_DATAALIGN_RIGHT;
-  hadc2.Init.NbrOfConversion = 1;
-  hadc2.Init.DMAContinuousRequests = DISABLE;
-  hadc2.Init.EOCSelection = ADC_EOC_SEQ_CONV;
-  if (HAL_ADC_Init(&hadc2) != HAL_OK)
-  {
-    Error_Handler();
-  }
-  /** Configure the analog watchdog
-  */
-  AnalogWDGConfig.WatchdogMode = ADC_ANALOGWATCHDOG_ALL_REG;
-  AnalogWDGConfig.HighThreshold = 600;
-  AnalogWDGConfig.LowThreshold = 160;
-  AnalogWDGConfig.ITMode = ENABLE;
-  if (HAL_ADC_AnalogWDGConfig(&hadc2, &AnalogWDGConfig) != HAL_OK)
-  {
-    Error_Handler();
-  }
-  /** Configure for the selected ADC regular channel its corresponding rank in the sequencer and its sample time.
-  */
-  sConfig.Channel = ADC_CHANNEL_4;
-  sConfig.Rank = 1;
-  sConfig.SamplingTime = ADC_SAMPLETIME_3CYCLES;
-  if (HAL_ADC_ConfigChannel(&hadc2, &sConfig) != HAL_OK)
-  {
-    Error_Handler();
-  }
-  /* USER CODE BEGIN ADC2_Init 2 */
-
-  /* USER CODE END ADC2_Init 2 */
-
-}
-
-/**
-  * @brief ADC3 Initialization Function
-  * @param None
-  * @retval None
-  */
-static void MX_ADC3_Init(void)
-{
-
-  /* USER CODE BEGIN ADC3_Init 0 */
-
-  /* USER CODE END ADC3_Init 0 */
-
-  ADC_AnalogWDGConfTypeDef AnalogWDGConfig = {0};
-  ADC_ChannelConfTypeDef sConfig = {0};
-
-  /* USER CODE BEGIN ADC3_Init 1 */
-
-  /* USER CODE END ADC3_Init 1 */
-  /** Configure the global features of the ADC (Clock, Resolution, Data Alignment and number of conversion)
-  */
-  hadc3.Instance = ADC3;
-  hadc3.Init.ClockPrescaler = ADC_CLOCK_SYNC_PCLK_DIV4;
-  hadc3.Init.Resolution = ADC_RESOLUTION_10B;
-  hadc3.Init.ScanConvMode = ENABLE;
-  hadc3.Init.ContinuousConvMode = ENABLE;
-  hadc3.Init.DiscontinuousConvMode = DISABLE;
-  hadc3.Init.ExternalTrigConvEdge = ADC_EXTERNALTRIGCONVEDGE_NONE;
-  hadc3.Init.ExternalTrigConv = ADC_SOFTWARE_START;
-  hadc3.Init.DataAlign = ADC_DATAALIGN_RIGHT;
-  hadc3.Init.NbrOfConversion = 1;
-  hadc3.Init.DMAContinuousRequests = DISABLE;
-  hadc3.Init.EOCSelection = ADC_EOC_SEQ_CONV;
-  if (HAL_ADC_Init(&hadc3) != HAL_OK)
-  {
-    Error_Handler();
-  }
-  /** Configure the analog watchdog
-  */
-  AnalogWDGConfig.WatchdogMode = ADC_ANALOGWATCHDOG_ALL_REG;
-  AnalogWDGConfig.HighThreshold = 600;
-  AnalogWDGConfig.LowThreshold = 160;
-  AnalogWDGConfig.ITMode = ENABLE;
-  if (HAL_ADC_AnalogWDGConfig(&hadc3, &AnalogWDGConfig) != HAL_OK)
-  {
-    Error_Handler();
-  }
-  /** Configure for the selected ADC regular channel its corresponding rank in the sequencer and its sample time.
-  */
-  sConfig.Channel = ADC_CHANNEL_10;
-  sConfig.Rank = 1;
-  sConfig.SamplingTime = ADC_SAMPLETIME_3CYCLES;
-  if (HAL_ADC_ConfigChannel(&hadc3, &sConfig) != HAL_OK)
-  {
-    Error_Handler();
-  }
-  /* USER CODE BEGIN ADC3_Init 2 */
-
-  /* USER CODE END ADC3_Init 2 */
+  /* USER CODE END DAC_Init 2 */
 
 }
 
@@ -499,39 +334,6 @@ static void MX_TIM1_Init(void)
 }
 
 /**
-  * @brief USART2 Initialization Function
-  * @param None
-  * @retval None
-  */
-static void MX_USART2_UART_Init(void)
-{
-
-  /* USER CODE BEGIN USART2_Init 0 */
-
-  /* USER CODE END USART2_Init 0 */
-
-  /* USER CODE BEGIN USART2_Init 1 */
-
-  /* USER CODE END USART2_Init 1 */
-  huart2.Instance = USART2;
-  huart2.Init.BaudRate = 115200;
-  huart2.Init.WordLength = UART_WORDLENGTH_8B;
-  huart2.Init.StopBits = UART_STOPBITS_1;
-  huart2.Init.Parity = UART_PARITY_NONE;
-  huart2.Init.Mode = UART_MODE_TX_RX;
-  huart2.Init.HwFlowCtl = UART_HWCONTROL_NONE;
-  huart2.Init.OverSampling = UART_OVERSAMPLING_16;
-  if (HAL_UART_Init(&huart2) != HAL_OK)
-  {
-    Error_Handler();
-  }
-  /* USER CODE BEGIN USART2_Init 2 */
-
-  /* USER CODE END USART2_Init 2 */
-
-}
-
-/**
   * @brief GPIO Initialization Function
   * @param None
   * @retval None
@@ -548,6 +350,12 @@ static void MX_GPIO_Init(void)
   /*Configure GPIO pin Output Level */
   HAL_GPIO_WritePin(GPIOA, GPIO_PIN_1|GPIO_PIN_8, GPIO_PIN_RESET);
 
+  /*Configure GPIO pins : PC1 PC2 */
+  GPIO_InitStruct.Pin = GPIO_PIN_1|GPIO_PIN_2;
+  GPIO_InitStruct.Mode = GPIO_MODE_IT_RISING;
+  GPIO_InitStruct.Pull = GPIO_NOPULL;
+  HAL_GPIO_Init(GPIOC, &GPIO_InitStruct);
+
   /*Configure GPIO pin : PA0 */
   GPIO_InitStruct.Pin = GPIO_PIN_0;
   GPIO_InitStruct.Mode = GPIO_MODE_IT_RISING;
@@ -561,14 +369,70 @@ static void MX_GPIO_Init(void)
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
   HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
 
+  /*Configure GPIO pins : PB4 PB5 */
+  GPIO_InitStruct.Pin = GPIO_PIN_4|GPIO_PIN_5;
+  GPIO_InitStruct.Mode = GPIO_MODE_IT_RISING;
+  GPIO_InitStruct.Pull = GPIO_NOPULL;
+  HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
+
   /* EXTI interrupt init*/
   HAL_NVIC_SetPriority(EXTI0_IRQn, 1, 0);
   HAL_NVIC_EnableIRQ(EXTI0_IRQn);
 
+  HAL_NVIC_SetPriority(EXTI1_IRQn, 0, 0);
+  HAL_NVIC_EnableIRQ(EXTI1_IRQn);
+
+  HAL_NVIC_SetPriority(EXTI2_IRQn, 0, 0);
+  HAL_NVIC_EnableIRQ(EXTI2_IRQn);
+
+  HAL_NVIC_SetPriority(EXTI4_IRQn, 0, 0);
+  HAL_NVIC_EnableIRQ(EXTI4_IRQn);
+
+  HAL_NVIC_SetPriority(EXTI9_5_IRQn, 0, 0);
+  HAL_NVIC_EnableIRQ(EXTI9_5_IRQn);
+
 }
 
 /* USER CODE BEGIN 4 */
-
+void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
+{
+  if(!measureRecord.measurementOngoing)
+  {
+    measureRecord.measurementOngoing = true;
+    htim1.Instance->CNT = 0;
+  }
+  switch(GPIO_Pin)
+  {
+  case GPIO_PIN_1:
+    if(!measureRecord.registeredSensorA)
+    {
+      measureRecord.timeSensorA = htim1.Instance->CNT;
+      measureRecord.registeredSensorA = true;
+    }
+    break;
+  case GPIO_PIN_2:
+    if(!measureRecord.registeredSensorB)
+    {
+      measureRecord.timeSensorB = htim1.Instance->CNT;
+      measureRecord.registeredSensorB = true;
+    }
+    break;
+  case GPIO_PIN_4:
+    if(!measureRecord.registeredSensorC)
+    {
+      measureRecord.timeSensorC = htim1.Instance->CNT;
+      measureRecord.registeredSensorC = true;
+    }
+    break;
+  case GPIO_PIN_5:
+    if(!measureRecord.registeredSensorD)
+    {
+      measureRecord.timeSensorD = htim1.Instance->CNT;
+      measureRecord.registeredSensorD = true;
+    }
+    break;
+  }
+}
 /* USER CODE END 4 */
 
 /**

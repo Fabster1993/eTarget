@@ -15,6 +15,7 @@ namespace Business
 
     private:
         quint8 calculateScore();
+        quint8 roundUpToNearestMultipleOf10(quint8 value);
 
         QPoint position;
         quint16 radius;

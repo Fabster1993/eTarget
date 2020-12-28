@@ -14,7 +14,7 @@ int main(int argc, char *argv[])
     QGuiApplication app(argc, argv);
 
     Bluetooth::DeviceHandler deviceHandler;
-//    deviceHandler.tryToConnect();
+    deviceHandler.tryToConnect();
 
     Business::TargetIndicator targetIndicator;
     Business::TargetIndicatorModel targetIndicatorModel(targetIndicator);

@@ -7,14 +7,7 @@ TargetIndicatorModel::TargetIndicatorModel(TargetIndicator& targetIndicator) :
     QAbstractListModel(),
     targetIndicator(targetIndicator)
 {
-    connect(&targetIndicator, &TargetIndicator::dataChanged, this,
-    [this]()
-    {
-        const int row = this->targetIndicator.getStrikeCount() - 1;
-        beginInsertRows(QModelIndex(), row, row);
-        endInsertRows();
-        emit strikeAdded(this->targetIndicator.getStrikeAt(row).getPosition().x(), this->targetIndicator.getStrikeAt(row).getPosition().y());
-    });
+    connect(&targetIndicator, &TargetIndicator::dataChanged, this, &TargetIndicatorModel::onStrikeAdded);
 }
 
 int TargetIndicatorModel::rowCount(const QModelIndex& parent) const
@@ -51,4 +44,12 @@ QHash<int, QByteArray> TargetIndicatorModel::roleNames() const
     names[scoreRole] = "score";
     names[radiusRole] = "radius";
     return names;
+}
+
+void TargetIndicatorModel::onStrikeAdded()
+{
+    const int row = 0;
+    beginInsertRows(QModelIndex(), row, row);
+    endInsertRows();
+    emit strikeAdded(this->targetIndicator.getStrikeAt(row).getPosition().x(), this->targetIndicator.getStrikeAt(row).getPosition().y());
 }

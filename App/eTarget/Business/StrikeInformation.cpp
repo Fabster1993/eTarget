@@ -21,8 +21,16 @@ quint8 StrikeInformation::calculateScore()
     double relativeRadius = qSqrt(qPow(position.x(), 2) + qPow(position.y(), 2));
     if(relativeRadius > 100)
         qWarning() << "Relative radius should not exceed 100 but is " << relativeRadius;
-    return static_cast<quint8>(qCeil(10 - relativeRadius / 10));
+    return roundUpToNearestMultipleOf10(100 - static_cast<quint8>(relativeRadius)) / 10;
 }
+
+quint8 StrikeInformation::roundUpToNearestMultipleOf10(quint8 value)
+{
+     if (value % 10 == 0)
+         return value;
+     return (10 - value % 10) + value;
+}
+
 
 quint16 StrikeInformation::getRadius() const
 {

@@ -9,12 +9,12 @@ namespace Business
     {
     public:
         StrikeLocator();
-        inline double function(double Px, double Py, double t0);
-        QPoint calculatePosition(const int timeSensorA, const int timeSensorB, const int timeSensorC);
+        QPoint calculatePosition(const double timeSensorA, const double timeSensorB, const double timeSensorC, const double timeSensorD);
     private:
         double tA;
         double tB;
         double tC;
+        double tD;
     };
 }
 
